@@ -1,9 +1,11 @@
  
 const core = require('@actions/core')
 const github = require('@actions/github');
+const issueParser = require('issue-parser')
 const context = github.context;
 const token = process.env.GITHUB_TOKEN;
 const octokit = github.getOctokit(token);
+const ghParser = issueParser('github');
 const fs = require('fs')
 
 async function verifyLinkedIssue() {
@@ -28,18 +30,24 @@ async function checkBodyForValidIssue(context, github){
     return false;
   }
   core.debug(`Checking PR Body: "${body}"`)
-  const re = /#(.*?)[\s]/g;
-  const matches = body.match(re);
+  const matches = ghParser(body);
   core.debug(`regex matches: ${matches}`)
-  if(matches){
-    for(let i=0,len=matches.length;i<len;i++){
-      let match = matches[i];
-      let issueId = match.replace('#','').trim();
+  if(matches && matches.allRefs && matches.allRefs.length > 0){
+    for(let i=0;i<matches.allRefs.length;i++){
+      let match = matches.allRefs[i];
+      let issueId = match.issue;
+      let owner = context.repo.owner;
+      let repo = context.repo.repo;
+      if (match.slug) {
+        let slugParts = match.slug.split('/');
+        owner = slugParts[0];
+        repo = slugParts[1];
+      }
       core.debug(`verifying match is a valid issue issueId: ${issueId}`)
       try{
         let issue = await  octokit.rest.issues.get({
-          owner: context.repo.owner,
-          repo: context.repo.repo,
+          owner: owner,
+          repo: repo,
           issue_number: issueId,
         });
         if(issue){
