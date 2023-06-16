@@ -9,5 +9,5 @@ inputs:
   filename:
       description: The name of the file to use as the comment template for pull requests with no linked issues.
 runs:
-  using: 'node12'
+  using: 'node16'
   main: 'src/index.js'
